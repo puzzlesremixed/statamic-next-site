@@ -11,7 +11,6 @@ import {
 
 export default function NewsPagination({meta}) {
     const searchParams = useSearchParams();
-    console.log(meta);
     const {current_page, last_page, links} = meta || {};
     const createPageURL = (pageNumber) => {
         const params = new URLSearchParams(searchParams);
@@ -59,8 +58,6 @@ export default function NewsPagination({meta}) {
                             </PaginationItem>
                         );
                     })}
-
-
                 </PaginationContent>
             </Pagination>
         )

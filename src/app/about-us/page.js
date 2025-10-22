@@ -1,7 +1,7 @@
-import { getEntryByID } from "@/lib/api";
+import {getEntryBySlug} from "@/lib/api";
 
 export default async function Home() {
-    const data = await getEntryByID({ collection: 'pages', id: 'home' });
+    const data = await getEntryBySlug({ collection: 'pages', slug: 'about-us' });
 
     if (!data) {
         return <div>Not found</div>;
