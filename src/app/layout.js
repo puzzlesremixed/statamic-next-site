@@ -2,6 +2,7 @@ import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
 import LivePreview from "@/components/LivePreview";
 import {draftMode} from "next/headers";
+import Layout from "@/layouts/default";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -19,14 +20,15 @@ export const metadata = {
 };
 
 export default async function RootLayout({children}) {
-    const {isEnabled} = await draftMode();
     return (
         <html lang="en">
         <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+            className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
         >
-        {children}
-        {isEnabled && <LivePreview/>}
+        <Layout>
+            {children}
+            <LivePreview/>
+        </Layout>
         </body>
         </html>
     );
