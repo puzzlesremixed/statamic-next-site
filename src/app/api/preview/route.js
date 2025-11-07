@@ -6,6 +6,7 @@ export async function GET(request) {
     const token = searchParams.get('token')
     const slug = searchParams.get('slug')
     const preview = searchParams.get('preview')
+    const locale = searchParams.get('locale')
 
     if (!token) {
         return new Response('Missing preview token', {status: 401})
@@ -16,5 +17,10 @@ export async function GET(request) {
     // if (collection) {
     //     redirect(`${collection}/${slug}`)
     // }
-    redirect(`${slug}?token=${token}&preview=${preview}`)
+    if (locale != "default") {
+        redirect(`/${slug}?token=${token}&preview=${preview}&handle=%${locale}`)
+    } else {
+        redirect(`${slug}?token=${token}&preview=${preview}`)
+
+    }
 }
