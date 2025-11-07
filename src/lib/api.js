@@ -105,7 +105,7 @@ export async function getCollectionEntries(collection, page = 1, search = '', si
             "filter[site:is]": site,
         };
         if (search) {
-            params['filter[title:is]'] = encodeURIComponent(search);
+            params['filter[title:contains]'] = encodeURIComponent(search);
         }
 
         const response = await apiClient.get(`/collections/${collection.trim()}/entries`, {params});

@@ -1,7 +1,7 @@
 "use client";
 
-import {usePathname, useRouter} from "next/navigation";
-import {useState, useEffect} from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
     Select,
     SelectContent,
@@ -10,23 +10,23 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-export default function LanguageSwitcher({sites}) {
+export default function LanguageSwitcher({ sites, currentLocale }) {
     const router = useRouter();
     const pathname = usePathname();
 
     const [translationUrls, setTranslationUrls] = useState({});
     const [isLoading, setIsLoading] = useState(true);
 
-    const currentSite = sites.find((site) => pathname.startsWith(`/${site.short_locale}`));
+    const currentSite = sites.find((site) => site.short_locale === currentLocale);
 
     useEffect(() => {
-        if (!pathname) return;
+        if (!pathname || !currentLocale) return;
         setIsLoading(true);
 
         fetch("/api/translations", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({pathname}),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pathname, currentLocale }),
         })
             .then((res) => (res.ok ? res.json() : Promise.reject(res)))
             .then((data) => setTranslationUrls(data))
@@ -38,9 +38,14 @@ export default function LanguageSwitcher({sites}) {
                 setTranslationUrls(fallbackUrls);
             })
             .finally(() => setIsLoading(false));
-    }, [pathname, sites]);
+    }, [pathname, sites, currentLocale]);
 
     const handleLocaleChange = (newLocale) => {
+        // Redirect to the default locale URL without the prefix
+        if (newLocale === process.env.NEXT_PUBLIC_DEFAULT_LOCALE) {
+            router.push(translationUrls[newLocale] || '/');
+            return;
+        }
         const newPath = translationUrls[newLocale] || `/${newLocale}`;
         router.push(newPath);
     };
@@ -48,13 +53,13 @@ export default function LanguageSwitcher({sites}) {
     return (
         <div className="language-switcher w-40">
             <Select
-                value={currentSite?.short_locale || ""}
+                value={currentLocale || ""}
                 onValueChange={handleLocaleChange}
                 disabled={isLoading}
             >
                 <SelectTrigger
                     className="w-full border-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm">
-                    <SelectValue placeholder="Select language"/>
+                    <SelectValue placeholder="Select language" />
                 </SelectTrigger>
                 <SelectContent>
                     {sites.map((site) => (

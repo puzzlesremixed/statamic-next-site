@@ -2,10 +2,9 @@ import Link from 'next/link';
 import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 
 export default function NewsCard({article, locale}) {
-    const articleUrl = `/${locale}/${article.collection.handle}/${article.slug}`;
 
     return (
-        <Link href={articleUrl}>
+        <Link href={article.url}>
             <Card>
                 <CardHeader>
                     <CardTitle>{article.title}</CardTitle>

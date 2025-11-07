@@ -2,7 +2,7 @@ import Link from "next/link";
 import {Button} from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-export default function Layout({sites, children}) {
+export default function Layout({sites, currentLocale, children}) {
     return (
         <div className="flex flex-col min-h-screen bg-white text-gray-900">
             <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
@@ -12,7 +12,7 @@ export default function Layout({sites, children}) {
                         Site
                     </Link>
 
-                    <LanguageSwitcher sites={sites}/>
+                    <LanguageSwitcher sites={sites} currentLocale={currentLocale}/>
                     <nav className="hidden md:flex items-center gap-6">
                         <Link href="/news" className="hover:text-yellow-600 transition">
                             News
