@@ -1,5 +1,7 @@
 import axios from 'axios';
 import {notFound} from "next/navigation";
+import {unstable_cache} from 'next/cache';
+
 
 export const apiClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_STATAMIC_API_URL,
@@ -94,6 +96,46 @@ export async function getAvailableSites({collection, originId}) {
 }
 
 
+// Get collection localization globals to map collection to its localized name. 
+// Ex =  news (original) -> berita (localized)    
+export const getCollectionTranslationsMap = unstable_cache(
+    async () => {
+        const response = await apiClient('/globals/route_localization');
+        const globalData = response.data.data;
+
+        const translationMap = {
+            localizedToCanonical: {},
+            canonicalToLocalized: {}
+        };
+
+        globalData.collection_routes?.forEach(route => {
+            const canonicalHandle = route.collection?.handle;
+
+            route.localized_slugs?.forEach(loc => {
+                const locale = loc.locale?.handle;
+                const localizedSlug = loc.slug;
+                if (!locale || !localizedSlug) return; // Skip if row is incomplete
+
+                if (!translationMap.localizedToCanonical[locale]) {
+                    translationMap.localizedToCanonical[locale] = {};
+                }
+                translationMap.localizedToCanonical[locale][localizedSlug] = canonicalHandle;
+
+                if (!translationMap.canonicalToLocalized[locale]) {
+                    translationMap.canonicalToLocalized[locale] = {};
+                }
+                translationMap.canonicalToLocalized[locale][canonicalHandle] = localizedSlug;
+            });
+        });
+
+        return translationMap;
+    },
+    ['collection_translations'],
+    {
+        revalidate: 60,
+    }
+);
+
 /*
     Get entries
  */
@@ -121,6 +163,62 @@ export async function getCollectionEntries(collection, page = 1, search = '', si
     Get a collection entry 
 */
 
+// Get entry using slugArray (automatically deduced collection and slug) 
+export async function getEntry(slugArray, locale) {
+    const translationMap = await getCollectionTranslationsMap();
+
+    let collection = 'pages'; // default collection
+    let entrySlug = slugArray.join('/') || 'home';
+    let potentialCollectionSlug = slugArray[0];
+
+    if (slugArray.length > 1 && translationMap.localizedToCanonical[locale]?.[potentialCollectionSlug]) {
+        collection = translationMap.localizedToCanonical[locale][potentialCollectionSlug];
+        entrySlug = slugArray.slice(1).join('/');
+    } else if (slugArray.length > 1) {
+        collection = potentialCollectionSlug;
+        entrySlug = slugArray.slice(1).join('/');
+    }
+
+    const collectionUrl = `/collections/${collection}/entries?filter[slug:is]=${entrySlug}&filter[site:is]=${locale}`;
+    let entryResponse = await apiClient(collectionUrl);
+
+    if ((!entryResponse.data.data || entryResponse.data.data.length === 0) && collection !== 'pages') {
+        const fullSlugForPages = slugArray.join('/');
+        const pagesUrl = `/collections/pages/entries?filter[slug:is]=${fullSlugForPages}&filter[site:is]=${locale}`;
+        entryResponse = await apiClient(pagesUrl);
+    }
+
+    if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
+        notFound();
+    }
+    console.log(entryResponse)
+    return entryResponse.data.data[0];
+}
+
+// Get entry alongside its translations
+export async function getEntryTranslations(collection, entryId, originId) {
+    const translationOfId = originId || entryId;
+
+    // Fetch translation
+    const translationsUrl = `/collections/${collection}/entries?filter[origin:is]=${translationOfId}`;
+    const translationsResponse = await apiClient(translationsUrl);
+    const translations = translationsResponse.data.data || [];
+
+    // Fetch the origin entry itself since the filter above doesn't include it
+    const originUrl = `/collections/${collection}/entries/${translationOfId}`;
+    const originResponse = await apiClient(originUrl);
+    const originEntry = originResponse.data.data;
+
+    const allEntries = [...translations];
+    if (originEntry && !allEntries.some(e => e.id === originEntry.id)) {
+        allEntries.push(originEntry);
+    }
+
+    return allEntries;
+}
+
+// old deprecated functions
+// get entry by its slug
 export async function getEntryBySlug({collection, slug, site = "default", token = "", preview = false} = {}) {
     try {
         const params = {
@@ -139,6 +237,7 @@ export async function getEntryBySlug({collection, slug, site = "default", token 
     }
 }
 
+// get entry by its id
 export async function getEntryByID({collection, id, token = "", preview = false} = {}) {
     try {
         const params = {};
@@ -151,6 +250,7 @@ export async function getEntryByID({collection, id, token = "", preview = false}
     }
 }
 
+// get id by its uri ()
 export async function getEntryByUri({collection, uri: uriQry} = {}) {
     try {
         const params = {
@@ -172,55 +272,4 @@ export async function getEntryByUri({collection, uri: uriQry} = {}) {
         console.error(`Failed to fetch entry by URI [${uriQry}] on collection [${collection.trim()}]:`, error);
         return null;
     }
-}
-
-/* Get entry ex. */
-export async function getEntry(slugArray, locale) {
-    const slug = slugArray.join('/') || 'home';
-
-    let collection = 'pages'; // default
-    let entrySlug = slug;
-
-    // If slug contains more than one part, assume the first is the collection.
-    if (slugArray.length > 1) {
-        collection = slugArray[0];
-        entrySlug = slugArray.slice(1).join('/');
-    }
-
-    // Attempt to fetch from a specific collection first
-    const collectionUrl = `/collections/${collection}/entries?filter[slug:is]=${entrySlug}&filter[site:is]=${locale}`;
-    let entryResponse = await apiClient(collectionUrl);
-    
-    // If not found in the specific collection, try default collection
-    if ((!entryResponse.data.data || entryResponse.data.data.length === 0) && collection !== 'pages') {
-        const pagesUrl = `/collections/pages/entries?filter[slug:is]=${slug}&filter[site:is]=${locale}`;
-        entryResponse = await apiClient(pagesUrl);
-    }
-    
-    if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
-        notFound();
-    }
-
-    return entryResponse.data.data[0];
-}
-
-export async function getEntryTranslations(collection, entryId, originId) {
-    const translationOfId = originId || entryId;
-
-    // Fetch translation
-    const translationsUrl = `/collections/${collection}/entries?filter[origin:is]=${translationOfId}`;
-    const translationsResponse = await apiClient(translationsUrl);
-    const translations = translationsResponse.data.data || [];
-
-    // Fetch the origin entry itself since the filter above doesn't include it
-    const originUrl = `/collections/${collection}/entries/${translationOfId}`;
-    const originResponse = await apiClient(originUrl);
-    const originEntry = originResponse.data.data;
-
-    const allEntries = [...translations];
-    if (originEntry && !allEntries.some(e => e.id === originEntry.id)) {
-        allEntries.push(originEntry);
-    }
-
-    return allEntries;
 }
