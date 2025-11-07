@@ -1,16 +1,20 @@
 import {NextResponse} from 'next/server';
-import {getEntry, getEntryTranslations, getAllSites} from '@/lib/api';
+import {getEntry, getEntryTranslations, getAllSites, getCollectionTranslationsMap} from '@/lib/api';
 
 export async function POST(request) {
     try {
-        const { pathname, currentLocale } = await request.json();
+        const {pathname, currentLocale} = await request.json();
         const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE || 'en';
 
         if (!currentLocale) {
             return NextResponse.json({error: 'Current locale not provided'}, {status: 400});
         }
 
-        const sites = await getAllSites();
+        const [sites, translationMap] = await Promise.all([
+            getAllSites(),
+            getCollectionTranslationsMap()
+        ]);
+
         const supportedLocales = sites.map(s => s.short_locale);
 
         if (!supportedLocales.includes(currentLocale)) {
@@ -26,12 +30,9 @@ export async function POST(request) {
         }
 
         const currentEntry = await getEntry(slugArray, currentLocale);
+
         if (!currentEntry) {
-            const translationUrls = {};
-            sites.forEach(site => {
-                translationUrls[site.short_locale] = site.short_locale === DEFAULT_LOCALE ? '/' : `/${site.short_locale}`;
-            });
-            return NextResponse.json(translationUrls);
+            return NextResponse.json({error: 'Entry not found'}, {status: 404});
         }
 
         const collection = currentEntry.collection.handle;
@@ -41,8 +42,29 @@ export async function POST(request) {
         allTranslations.forEach(entry => {
             const site = sites.find(s => s.handle === entry.locale);
             if (site) {
-                const isDefault = site.short_locale === DEFAULT_LOCALE;
-                translationUrls[site.short_locale] = isDefault ? entry.uri : `/${site.short_locale}${entry.uri}`;
+                const entryLocale = site.short_locale;
+                const isDefaultLocale = entryLocale === DEFAULT_LOCALE;
+                const localizedCollection = translationMap.canonicalToLocalized[entryLocale]?.[collection] || collection;
+
+                const translatedEntrySlug = entry.slug;
+                let newPath = `/${localizedCollection}/${translatedEntrySlug}`;
+
+                if (collection === 'pages') {
+                    newPath = `/${entry.slug}`;
+                } else {
+                    const localizedCollection = translationMap.canonicalToLocalized[entryLocale]?.[collection] || collection;
+                    newPath = `/${localizedCollection}/${entry.slug}`;
+                }
+
+                if (!isDefaultLocale) {
+                    newPath = `/${entryLocale}${newPath}`;
+                }
+
+                if (isDefaultLocale && newPath === '/home') {
+                    newPath = '/';
+                }
+
+                translationUrls[entryLocale] = newPath;
             }
         });
 
@@ -50,7 +72,6 @@ export async function POST(request) {
 
     } catch (error) {
         if (error.message?.includes("NEXT_NOT_FOUND")) {
-            // Fallback : root URLs for all locales
             const sites = await getAllSites();
             const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE || 'en';
             const translationUrls = {};

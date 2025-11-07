@@ -14,7 +14,6 @@ export default async function LocaleLayout({children, params}) {
         <body className={inter.className}>
         <Layout sites={sites} currentLocale={params.locale}>
             {children}
-            <LivePreview/>
         </Layout>
         </body>
         </html>

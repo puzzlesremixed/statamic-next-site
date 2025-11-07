@@ -12,7 +12,6 @@ export default function Layout({sites, currentLocale, children}) {
                         Site
                     </Link>
 
-                    <LanguageSwitcher sites={sites} currentLocale={currentLocale}/>
                     <nav className="hidden md:flex items-center gap-6">
                         <Link href="/news" className="hover:text-yellow-600 transition">
                             News
@@ -23,9 +22,7 @@ export default function Layout({sites, currentLocale, children}) {
                         <Link href="/about" className="hover:text-yellow-600 transition">
                             About
                         </Link>
-                        <Button className="bg-yellow-400 hover:bg-yellow-500 text-gray-900">
-                            Subscribe
-                        </Button>
+                        <LanguageSwitcher sites={sites} currentLocale={currentLocale}/>
                     </nav>
                 </div>
             </header>
