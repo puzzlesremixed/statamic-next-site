@@ -104,23 +104,33 @@ export const getCollectionTranslationsMap = unstable_cache(
         const globalData = response.data.data;
 
         const translationMap = {
+            // localized to canonical : the origin to the localized name 
+            // ex. translationMap.localizedToCanonical["id"]["tentang-kami"] = "about-us"
             localizedToCanonical: {},
+            // canonical to localized: the localized to the origin name 
+            // translationMap.localizedToCanonical["id"]["tentang-kami"] = "about-us"
             canonicalToLocalized: {}
         };
 
+        // Each route represents one collection
         globalData.collection_routes?.forEach(route => {
+            // canonical handle is the original collection name
             const canonicalHandle = route.collection?.handle;
 
             route.localized_slugs?.forEach(loc => {
+                // get the locale
                 const locale = loc.locale?.handle;
+                // get the slug
                 const localizedSlug = loc.slug;
-                if (!locale || !localizedSlug) return; // Skip if row is incomplete
+                if (!locale || !localizedSlug) return;
 
+                // builds the first map: localized slug → canonical handle
                 if (!translationMap.localizedToCanonical[locale]) {
                     translationMap.localizedToCanonical[locale] = {};
                 }
                 translationMap.localizedToCanonical[locale][localizedSlug] = canonicalHandle;
 
+                // builds the second map: canonical handle → localized slug
                 if (!translationMap.canonicalToLocalized[locale]) {
                     translationMap.canonicalToLocalized[locale] = {};
                 }
@@ -139,7 +149,7 @@ export const getCollectionTranslationsMap = unstable_cache(
 /*
     Get entries
  */
-export async function getCollectionEntries(collection, page = 1, search = '', site = "default") {
+export async function getCollectionEntries(collection, page = 1, search = '', site = "default", previewToken = null) {
     try {
         const params = {
             limit: 10,
@@ -150,6 +160,7 @@ export async function getCollectionEntries(collection, page = 1, search = '', si
             params['filter[title:contains]'] = encodeURIComponent(search);
         }
 
+        if (previewToken) params.token = previewToken;
         const response = await apiClient.get(`/collections/${collection.trim()}/entries`, {params});
         return response.data;
     } catch (error) {
@@ -164,57 +175,84 @@ export async function getCollectionEntries(collection, page = 1, search = '', si
 */
 
 // Get entry using slugArray (automatically deduced collection and slug) 
-export async function getEntry(slugArray, locale) {
-    const translationMap = await getCollectionTranslationsMap();
+export async function getEntry(slugArray, locale, previewToken = null) {
+    try {
+        const translationMap = await getCollectionTranslationsMap();
+        let collection = 'pages'; // default collection
+        let entrySlug = slugArray.join('/') || 'home';
+        let potentialCollectionSlug = slugArray[0];
 
-    let collection = 'pages'; // default collection
-    let entrySlug = slugArray.join('/') || 'home';
-    let potentialCollectionSlug = slugArray[0];
+        // the collection might have a localized slug so checks it against the map
+        if (slugArray.length > 1 && translationMap.localizedToCanonical[locale]?.[potentialCollectionSlug]) {
+            // get the actual collection name from the map
+            collection = translationMap.localizedToCanonical[locale][potentialCollectionSlug];
+            // slice off the collection
+            entrySlug = slugArray.slice(1).join('/');
 
-    if (slugArray.length > 1 && translationMap.localizedToCanonical[locale]?.[potentialCollectionSlug]) {
-        collection = translationMap.localizedToCanonical[locale][potentialCollectionSlug];
-        entrySlug = slugArray.slice(1).join('/');
-    } else if (slugArray.length > 1) {
-        collection = potentialCollectionSlug;
-        entrySlug = slugArray.slice(1).join('/');
+            // If the slug is not localized
+        } else if (slugArray.length > 1) {
+            collection = potentialCollectionSlug;
+            entrySlug = slugArray.slice(1).join('/');
+        }
+
+
+        const collectionUrl = `/collections/${collection}/entries`;
+        let params = {
+            "filter[slug:is]": entrySlug,
+            "filter[site:is]": locale,
+        };
+        if (previewToken) params.token = previewToken;
+        let entryResponse = await apiClient.get(collectionUrl, {params});
+
+        // If no entry was found, fallback to the pages collection
+        if ((!entryResponse.data.data || entryResponse.data.data.length === 0) && collection !== 'pages') {
+            params["filter[slug:is]"] = slugArray.join('/');
+            const pagesUrl = `/collections/pages/entries`;
+            entryResponse = await apiClient.get(pagesUrl, {params});
+        }
+
+        if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
+            notFound();
+        }
+        return entryResponse.data.data[0];
+    } catch (error) {
+        console.error(`Failed to fetch entry:`, error);
+        return null;
     }
-
-    const collectionUrl = `/collections/${collection}/entries?filter[slug:is]=${entrySlug}&filter[site:is]=${locale}`;
-    let entryResponse = await apiClient(collectionUrl);
-
-    if ((!entryResponse.data.data || entryResponse.data.data.length === 0) && collection !== 'pages') {
-        const fullSlugForPages = slugArray.join('/');
-        const pagesUrl = `/collections/pages/entries?filter[slug:is]=${fullSlugForPages}&filter[site:is]=${locale}`;
-        entryResponse = await apiClient(pagesUrl);
-    }
-
-    if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
-        notFound();
-    }
-    console.log(entryResponse)
-    return entryResponse.data.data[0];
 }
 
 // Get entry alongside its translations
-export async function getEntryTranslations(collection, entryId, originId) {
-    const translationOfId = originId || entryId;
+export async function getEntryTranslations(collection, entryId, originId, previewToken = null) {
+    try {
+        const translationOfId = originId || entryId;
 
-    // Fetch translation
-    const translationsUrl = `/collections/${collection}/entries?filter[origin:is]=${translationOfId}`;
-    const translationsResponse = await apiClient(translationsUrl);
-    const translations = translationsResponse.data.data || [];
+        let paramsOrigin = {
+            "filter[origin:is]": translationOfId,
+        };
+        if (previewToken) paramsOrigin.token = previewToken;
 
-    // Fetch the origin entry itself since the filter above doesn't include it
-    const originUrl = `/collections/${collection}/entries/${translationOfId}`;
-    const originResponse = await apiClient(originUrl);
-    const originEntry = originResponse.data.data;
+        // Fetch translation
+        const translationsUrl = `/collections/${collection}/entries`;
+        const translationsResponse = await apiClient.get(translationsUrl, {paramsOrigin});
+        const translations = translationsResponse.data.data || [];
 
-    const allEntries = [...translations];
-    if (originEntry && !allEntries.some(e => e.id === originEntry.id)) {
-        allEntries.push(originEntry);
+        // Fetch the origin entry itself since the filter above doesn't include it
+        const originUrl = `/collections/${collection}/entries/${translationOfId}`;
+        delete paramsOrigin["filter[origin:is]"];
+        const originResponse = await apiClient(originUrl, {paramsOrigin});
+        const originEntry = originResponse.data.data;
+
+        // combine
+        const allEntries = [...translations];
+        if (originEntry && !allEntries.some(e => e.id === originEntry.id)) {
+            allEntries.push(originEntry);
+        }
+
+        return allEntries;
+    } catch (error) {
+        console.error(`Failed to fetch entries :`, error);
+        return null;
     }
-
-    return allEntries;
 }
 
 // old deprecated functions
