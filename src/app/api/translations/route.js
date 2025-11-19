@@ -10,7 +10,6 @@ export async function POST(request) {
             return NextResponse.json({error: 'Current locale not provided'}, {status: 400});
         }
 
-        // Loading site data and translation maps
         const [sites, translationMap] = await Promise.all([
             getAllSites(),
             getCollectionTranslationsMap()
@@ -18,12 +17,10 @@ export async function POST(request) {
 
         const supportedLocales = sites.map(s => s.short_locale);
 
-        // If the locale from the request isn’t in the supported site list
         if (!supportedLocales.includes(currentLocale)) {
             return NextResponse.json({error: 'Invalid locale'}, {status: 400});
         }
 
-        // Split ths slug into arrays
         const parts = pathname.split('/').filter(Boolean);
         let slugArray = parts;
 

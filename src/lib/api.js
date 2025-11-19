@@ -253,20 +253,20 @@ export async function getEntryTranslations(collection, entryId, originId, previe
     try {
         const translationOfId = originId || entryId;
 
-        let paramsOrigin = {
+        let params = {
             "filter[origin:is]": translationOfId,
         };
-        if (previewToken) paramsOrigin.token = previewToken;
+        if (previewToken) params.token = previewToken;
 
         // Fetch translation
         const translationsUrl = `/collections/${collection}/entries`;
-        const translationsResponse = await apiClient.get(translationsUrl, {paramsOrigin});
+        const translationsResponse = await apiClient.get(translationsUrl, {params});
         const translations = translationsResponse.data.data || [];
 
         // Fetch the origin entry itself since the filter above doesn't include it
         const originUrl = `/collections/${collection}/entries/${translationOfId}`;
-        delete paramsOrigin["filter[origin:is]"];
-        const originResponse = await apiClient(originUrl, {paramsOrigin});
+        delete params["filter[origin:is]"];
+        const originResponse = await apiClient.get(originUrl, {params});
         const originEntry = originResponse.data.data;
 
         // combine
@@ -374,7 +374,7 @@ export async function getGlobal(handle, locale, previewToken = null) {
         if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
             notFound();
         }
-        
+
         return entryResponse.data.data;
     } catch (error) {
         console.error(`Failed to fetch global:`, error);
