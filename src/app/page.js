@@ -1,10 +1,11 @@
-import DefaultLocalePage from "@/app/[...slug]/page";
+import DynamicPage from "@/app/[locale]/[[...slug]]/page";
+
 export default async function Home(props) {
     const mergedProps = {
         ...props,
         params: { slug: [] },
         searchParams: props.searchParams || {},
     };
-
-    return <DefaultLocalePage {...mergedProps} />;
+    
+    return <DynamicPage {...mergedProps} />;
 }

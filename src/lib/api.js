@@ -311,3 +311,46 @@ export async function getEntryByUri({collection, uri: uriQry} = {}) {
         return null;
     }
 }
+
+/* Get globals */
+
+export async function getAllGlobals( locale, previewToken = null) {
+    try {
+
+        const globalUrl = `/globals`;
+        let params = {
+            "site": locale,
+        };
+        if (previewToken) params.token = previewToken;
+        let entryResponse = await apiClient.get(globalUrl, {params});
+
+        if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
+            notFound();
+        }
+        return entryResponse.data.data;
+    } catch (error) {
+        console.error(`Failed to fetch globals:`, error);
+        return null;
+    }
+}
+
+export async function getGlobal(handle, locale, previewToken = null) {
+    try {
+
+        const globalUrl = `/globals/${handle}`;
+        let params = {
+            "site": locale,
+        };
+        if (previewToken) params.token = previewToken;
+        let entryResponse = await apiClient.get(globalUrl, {params});
+
+        if (!entryResponse.data.data || entryResponse.data.data.length === 0) {
+            notFound();
+        }
+        
+        return entryResponse.data.data;
+    } catch (error) {
+        console.error(`Failed to fetch global:`, error);
+        return null;
+    }
+}

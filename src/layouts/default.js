@@ -1,8 +1,10 @@
 import Link from "next/link";
-import {Button} from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import {getGlobal} from "@/lib/api";
 
-export default function Layout({sites, currentLocale, children}) {
+export default async function Layout({sites, currentLocale, children}) {
+    const footerData = await getGlobal("footer", currentLocale);
+    
     return (
         <div className="flex flex-col min-h-screen bg-white text-gray-900">
             <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
@@ -31,8 +33,12 @@ export default function Layout({sites, currentLocale, children}) {
 
             <footer className="border-t border-gray-200 bg-gray-50 text-gray-700 py-6 mt-auto">
                 <div
-                    className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-2 text-sm">
-                    <p>&copy; {new Date().getFullYear()} Site. All rights reserved.</p>
+                    className="container mx-auto px-4 flex flex-col md:flex-row items-start justify-between gap-2 text-sm">
+                    <div className={"max-w-sm"}>
+                        <p className={"mb-4"}>&copy; {new Date().getFullYear()} {footerData.site_name}. All rights reserved.</p>
+                        <p>{footerData.desc}</p>
+                        
+                    </div>
                     <div className="flex gap-4">
                         <Link href="/privacy" className="hover:text-yellow-600">
                             Privacy
