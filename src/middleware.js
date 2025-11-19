@@ -1,8 +1,7 @@
 import {NextResponse} from 'next/server';
 import {getAllSites} from "@/lib/api";
-
+import {DEFAULT_LOCALE} from '@/lib/constants';
 let SUPPORTED_LOCALES = [];
-const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE || 'en';
 
 async function updateSupportedLocales() {
     try {
@@ -61,6 +60,6 @@ export async function middleware(request) {
 
 export const config = {
     matcher: [
-        '/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js).*)',
+        '/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js|sitemap|sitemap.xml).*)',
     ],
 };

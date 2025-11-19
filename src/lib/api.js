@@ -35,6 +35,14 @@ export async function getAllSites() {
     }
 }
 
+// get locales from sites
+export async function getLocales() {
+    const locales = await getAllSites()
+
+    return locales.map(item => item.handle);
+}
+
+
 // Get a site information based on short_locale
 export async function getSiteByLocale(locale) {
     try {
@@ -145,6 +153,25 @@ export const getCollectionTranslationsMap = unstable_cache(
         revalidate: 60,
     }
 );
+
+// get all pages for sitemap
+export async function getSitemapData() {
+    try {
+
+        const response = await apiClient.get('/sitemap-data');
+        const collections = response.data?.collections ?? null;
+
+        if (collections && Object.keys(collections).length > 0) {
+            return response.data;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Failed to fetch sitemap data:', error);
+        return null;
+    }
+}
+
 
 /*
     Get entries

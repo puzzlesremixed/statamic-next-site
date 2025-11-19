@@ -1,10 +1,10 @@
 import {NextResponse} from 'next/server';
 import {getEntry, getEntryTranslations, getAllSites, getCollectionTranslationsMap} from '@/lib/api';
+import {DEFAULT_LOCALE} from '@/lib/constants';
 
 export async function POST(request) {
     try {
         const {pathname, currentLocale} = await request.json();
-        const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE || 'en';
 
         if (!currentLocale) {
             return NextResponse.json({error: 'Current locale not provided'}, {status: 400});
@@ -50,12 +50,7 @@ export async function POST(request) {
                 const entryLocale = site.short_locale;
                 const isDefaultLocale = entryLocale === DEFAULT_LOCALE;
 
-                // Figure out the correct collection name for this locale
-                // If the collection doesn’t need translation, it falls back to the same name
-                const localizedCollection = translationMap.canonicalToLocalized[entryLocale]?.[collection] || collection;
-
-                const translatedEntrySlug = entry.slug;
-                let newPath = `/${localizedCollection}/${translatedEntrySlug}`;
+                let newPath;
 
                 // If the collection is "pages" (top level entry that doenst have a prefix)
                 if (collection === 'pages') {
@@ -86,7 +81,6 @@ export async function POST(request) {
         // Returns fallback URLs pointing to each site’s homepage
         if (error.message?.includes("NEXT_NOT_FOUND")) {
             const sites = await getAllSites();
-            const DEFAULT_LOCALE = process.env.NEXT_PUBLIC_DEFAULT_LOCALE || 'en';
             const translationUrls = {};
             sites.forEach(site => {
                 translationUrls[site.short_locale] = site.short_locale === DEFAULT_LOCALE ? '/' : `/${site.short_locale}`;
