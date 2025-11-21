@@ -155,10 +155,12 @@ export const getCollectionTranslationsMap = unstable_cache(
 );
 
 // get all pages for sitemap
-export async function getSitemapData() {
+export async function getSitemapData(lang, page = 1) {
     try {
-
-        const response = await apiClient.get('/sitemap-data');
+        const params = {
+            page: page || 1,
+        };
+        const response = await apiClient.get(`/sitemap-data/${lang}`, {params});
         const collections = response.data?.collections ?? null;
 
         if (collections && Object.keys(collections).length > 0) {

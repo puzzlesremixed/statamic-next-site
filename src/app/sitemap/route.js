@@ -8,7 +8,7 @@ export async function GET() {
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${locales.map((locale) => `
     <sitemap>
-      <loc>${SITE_URL}/sitemap/${locale}.xml</loc>
+      <loc>${SITE_URL}/sitemap_${locale}.xml</loc>
     </sitemap>
   `).join('')}
 </sitemapindex>
