@@ -14,10 +14,10 @@ ${urls.map((u) => `
     <priority>${u.priority}</priority>
     <changefreq>${u.changefreq}</changefreq>
   </url>`
-        )
+    )
         .join("")}
 </urlset>`;
-    
+
     return new Response(xml, {
         headers: {"Content-Type": "text/xml"},
     });

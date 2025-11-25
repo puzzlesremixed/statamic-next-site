@@ -1,5 +1,4 @@
 import {Inter} from "next/font/google";
-import LivePreview from "@/components/LivePreview";
 import Layout from "@/layouts/default";
 import {getAllSites} from "@/lib/api";
 import "../globals.css";
