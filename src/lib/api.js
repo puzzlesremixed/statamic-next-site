@@ -155,13 +155,27 @@ export const getCollectionTranslationsMap = unstable_cache(
 );
 
 // get all pages for sitemap
-export async function getSitemapData(lang, page = 1) {
+export async function getAllSitemaps() {
     try {
-        const params = {
-            page: page || 1,
-        };
-        const response = await apiClient.get(`/sitemap-data/${lang}`, {params});
-        const collections = response.data?.collections ?? null;
+        const response = await apiClient.get(`/sitemap-data/`);
+        const collections = response.data ?? null;
+
+        if (collections && Object.keys(collections).length > 0) {
+            return response.data;
+        }
+
+        return null;
+    } catch
+        (error) {
+        console.error('Failed to fetch sitemap data:', error);
+        return null;
+    }
+}
+
+export async function getSitemapByCollection(collection) {
+    try {
+        const response = await apiClient.get(`/sitemap-data/${collection}`);
+        const collections = response.data ?? null;
 
         if (collections && Object.keys(collections).length > 0) {
             return response.data;
@@ -174,6 +188,21 @@ export async function getSitemapData(lang, page = 1) {
     }
 }
 
+export async function getSitemapCollections() {
+    try {
+        const response = await apiClient.get(`/sitemap-collections`);
+        const collections = response.data ?? null;
+
+        if (collections && Object.keys(collections).length > 0) {
+            return response.data;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Failed to fetch sitemap data:', error);
+        return null;
+    }
+}
 
 /*
     Get entries
@@ -343,7 +372,7 @@ export async function getEntryByUri({collection, uri: uriQry} = {}) {
 
 /* Get globals */
 
-export async function getAllGlobals( locale, previewToken = null) {
+export async function getAllGlobals(locale, previewToken = null) {
     try {
 
         const globalUrl = `/globals`;

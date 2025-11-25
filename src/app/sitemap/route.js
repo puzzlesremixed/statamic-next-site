@@ -1,14 +1,14 @@
 import {SITE_URL} from '@/lib/constants';
-import {getLocales} from "@/lib/api";
+import {getSitemapCollections} from "@/lib/api";
 
 export async function GET() {
-    const locales = await getLocales();
+    const collection = await getSitemapCollections();
 
     const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${locales.map((locale) => `
+  ${collection.map((collection) => `
     <sitemap>
-      <loc>${SITE_URL}/sitemap_${locale}.xml</loc>
+      <loc>${SITE_URL}/sitemap-${collection}.xml</loc>
     </sitemap>
   `).join('')}
 </sitemapindex>
