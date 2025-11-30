@@ -1,75 +1,109 @@
-"use client";
+'use client';
 
-import {forwardRef, useImperativeHandle, useLayoutEffect, useRef} from "react";
-import gsap from "gsap";
-import {ScrollTrigger} from "gsap/ScrollTrigger";
+import React, {useLayoutEffect, useRef, forwardRef, useImperativeHandle, useEffect} from 'react';
+import gsap from 'gsap';
+import {ScrollTrigger} from 'gsap/ScrollTrigger';
+import {Swiper, SwiperSlide} from 'swiper/react';
+
+import 'swiper/css';
+import 'swiper/css/pagination';
+
+import {Mousewheel, Pagination} from 'swiper/modules';
+import Svg1 from "@/components/svgs/svg1";
+import SVGComponent from "@/components/svgs/svgviewer-react-output";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const GsapTestingPage = forwardRef((props, ref) => {
     const container = useRef(null);
+    // const swiperRef = useRef(null);
+
     useImperativeHandle(ref, () => container.current);
 
     useLayoutEffect(() => {
         if (!container.current) return;
-        gsap.set("#groupA, #groupB, #groupC", {opacity: 0});
 
         const ctx = gsap.context(() => {
-            const groups = ["A", "B", "C"];
+            const groups = gsap.utils.toArray(".svg-group");
 
-            function animateIn(group) {
-                gsap.to(`#group${group}`, {x: 0, y: 0, opacity: 1, duration: 0.5});
-            }
-
-            function animateOut(group) {
-                gsap.to(`#group${group}`, {x: (group === "B" ? 200 : -200), y: -100, opacity: 0, duration: 0.5});
-            }
-
-
-            groups.forEach((group, i) => {
-                console.log("scroll trigger created for group" + group);
-                ScrollTrigger.create({
-                    trigger: `#group${group}`,
-                    start: `top center`,
-                    end: "bottom center",
-                    toggleActions: "play reverse play reverse",
-                    onEnter: () => {
-                        animateIn(group);
-                    },
-                    onEnterBack: () => {
-                        animateIn(group);
-                    },
-                    onLeaveBack: () => {
-                        animateOut(group);
-                    },
-                    onLeave: () => {
-                        animateOut(group);
-                    },
-
-                    markers: true,
+            // set initai posiiton of each group child
+            groups.forEach(group => {
+                gsap.set(group.children, {
+                    opacity: 0, x: () => gsap.utils.random(-200, 200), y: () => gsap.utils.random(-200, 200),
                 });
             });
+
+            // set the first group to visible
+            gsap.set(groups[0].children, {
+                opacity: 1, x: 0, y: 0,
+            });
+
+            const tl = gsap.timeline({
+                scrollTrigger: {
+                    trigger: container.current,
+                    start: "top top+=30%",
+                    // toggleAction: "restart pause reverse pause",
+                    // end: "+=150%",
+                    pin: true,
+                    // pinSpacing: false,
+                    scrub: 1,
+                    snap: {
+                        snapTo: 1 / (groups.length - 1),
+                        // duration: 0.5,
+                        ease: "power2.out",
+                    },
+                    markers: true,
+                },
+            });
+
+            groups.forEach((group, index) => {
+                const shapes = group.children;
+
+                // entrance anim
+                if (index > 0) {
+                    tl.add(gsap.to(shapes, {
+                        x: 0, y: 0, // scale: 1,
+                        opacity: 1, duration: 1, ease: "power2.out", stagger: {amount: 0.2, from: "random"}
+                        // before the start of last anim
+                    }), "<-0.1");
+                }
+                tl.add(gsap.to({}, {duration: 0.5}));
+                // exit animation 
+                if (index < groups.length - 1) {
+                    tl.add(gsap.to(shapes, {
+                        x: () => gsap.utils.random(-500, 500),
+                        y: () => gsap.utils.random(-300, 300),
+                        opacity: 0,
+                        duration: 1,
+                        ease: "power2.in",
+                        stagger: {amount: 0.15, from: "random"}
+                        // before the end of last anim
+                    }), ">-0.1");
+
+                }
+            })
+
         }, container);
 
         return () => ctx.revert();
-    }, []);
+    });
 
-
-    return (<div ref={container} className="h-[300vh] py-120">
-        <svg width="600" height="200" viewBox="0 0 600 400" id="groupA">
-            <circle className="a-circle" cx="100" cy="200" r="40" fill="red"/>
-            <rect className="a-rect" x="200" y="150" width="80" height="80" fill="orange"/>
-        </svg>
-        <svg width="600" height="200" viewBox="0 0 600 400" id='groupB'>
-            <circle className="b-circle" cx="150" cy="200" r="40" fill="green"/>
-            <rect className="b-rect" x="250" y="150" width="80" height="80" fill="blue"/>
-        </svg>
-        <svg width="600" height="200" viewBox="0 0 600 400" id='groupC'>
-            <circle className="c-circle" cx="120" cy="200" r="40" fill="purple"/>
-            <rect className="c-rect" x="300" y="150" width="80" height="80" fill="pink"/>
-        </svg>
-        {/*</div>*/}
-    </div>);
+    return (<div ref={container} className="w-full relative overflow-hidden my-24" id="gsapPinned">
+        <div className="w-full h-[296px] flex ">
+            <div className="basis-1/2 flex items-center justify-center relative">
+                <div className="relative w-[296px] h-[296px]">
+                    <SVGComponent className="absolute inset-0 m-auto"/>
+                    <SVGComponent className="absolute inset-0 m-auto"/>
+                    <SVGComponent className="absolute inset-0 m-auto"/>
+                </div>
+            </div>
+            <div className="bg-red-700  basis-1/2">
+                <p>Step 1</p>
+                <p>Step 2</p>
+                <p>Step 3</p>
+            </div>
+        </div>
+    </div>)
 });
 
 export default GsapTestingPage;
